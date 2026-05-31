@@ -15,8 +15,7 @@ def health_check():
     Returns the status of the API.
     """
     return {
-        "status": "healthy",
-        "service": "FastAPI Backend"
+        "status": "healthy"
     }
 
 
