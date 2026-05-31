@@ -6,6 +6,7 @@ Run with: uvicorn main:app --reload
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import health
+from app.routes import llm_invocation
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -25,6 +26,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router)
+app.include_router(llm_invocation.router)
 
 # Root endpoint
 @app.get("/")
