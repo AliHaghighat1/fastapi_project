@@ -1,0 +1,6 @@
+services:
+  api:
+    volumes:
+      - .:/app
+    environment:
+      DEV_RELOAD: "true"

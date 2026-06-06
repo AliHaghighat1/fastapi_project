@@ -1,92 +1,74 @@
-# Git Workflow Guide
+# Git Workflow
 
-Quick guide for cloning the repository, creating a development branch, and submitting pull requests.
+This project uses a simple team workflow with one production branch, one shared test branch and one personal branch per developer.
 
-## Getting Started
+## Branches
 
-### 1. Clone the Repository
+| Branch type | Example | Purpose |
+|---|---|---|
+| Production | `main` | Stable code only. Production server deploys from here. |
+| Shared test | `SMS_dev` or `develop` | Code that is ready for team testing. Test server deploys from here. |
+| Developer branch | `ali_branch`, `sara_branch`, `sms_branch` | Each developer works in their own branch. |
+
+## Daily developer workflow
+
+Start from the latest shared branch:
 
 ```bash
-git clone https://github.com/AliHaghighat1/fastapi_project.git
-cd fastapi_project
+git checkout SMS_dev
+git pull origin SMS_dev
+git checkout -b your_branch
 ```
 
-### 2. Create and Switch to `initial_dev` Branch
+Work locally, then commit:
 
 ```bash
-# Create your dev branch from main
-git checkout -b <put your initials>_dev
-Example: git checkout -b AH_dev 
-
-# Verify you're on the branch
-git branch
-```
-
-## Development Workflow
-
-### Working on Your Branch
-
-```bash
-# Make your changes to files
-
-# Stage your changes
+git status
 git add .
-
-# Commit your changes
-git commit -m "Your commit message"
-
-# Push to initial_dev branch
-git push origin initial_dev
+git commit -m "Describe your change"
+git push origin your_branch
 ```
 
-### Creating a Pull Request (PR)
+Open a pull request from `your_branch` into `SMS_dev`.
 
-Once you're ready to merge your changes to `main`:
+After the test environment is verified, open a pull request from `SMS_dev` into `main`.
+
+## Server deployment rule
+
+- production folder: only `main`
+- shared test folder: `SMS_dev` or the agreed test branch
+- personal developer folders: each developer's own branch
+
+This avoids overwriting another developer's work on the server.
+
+## Useful commands
+
+Check current branch:
 
 ```bash
-# Push your branch if not already pushed
-git push origin initial_dev
-
-# Then go to GitHub and:
-# 1. Navigate to https://github.com/AliHaghighat1/fastapi_project
-# 2. Click "New Pull Request"
-# 3. Select base: main, compare: initial_dev
-# 4. Add title and description
-# 5. Click "Create Pull Request"
+git branch --show-current
 ```
 
-## Common Commands
+Fetch all remote branches:
 
 ```bash
-# Check current branch
-git branch
+git fetch --all --prune
+```
 
-# Switch between branches
-git checkout initial_dev
-git checkout main
+Switch branch:
 
-# Pull latest changes from remote
-git pull origin initial_dev
+```bash
+git checkout branch_name
+```
 
-# View commit history
-git log --oneline
+Update current branch:
 
-# Undo last commit (keep changes)
-git reset --soft HEAD~1
+```bash
+git pull origin branch_name
+```
 
-# See what changed
+Show changed files:
+
+```bash
 git status
 ```
-
-## Tips
-
-- Always pull latest changes before starting work: `git pull origin initial_dev`
-- Keep commits focused and descriptive
-- Push regularly to avoid losing work
-- Review your changes before committing: `git diff`
-
-## Need Help?
-
-- Check git status: `git status`
-- View branch info: `git branch -v`
-- See remote URLs: `git remote -v`

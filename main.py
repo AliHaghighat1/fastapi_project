@@ -1,39 +1,46 @@
-"""
-FastAPI application entry point.
-Run with: uvicorn main:app --reload
-"""
+"""FastAPI application entry point."""
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import health
-from app.routes import llm_invocation
 
-# Initialize FastAPI app
+from app.config import settings
+from app.routes import health, llm_invocation
+
+
 app = FastAPI(
-    title="FastAPI Backend",
-    description="A simple FastAPI backend application",
-    version="1.0.0"
+    title=settings.api_title,
+    description=settings.api_description,
+    version=settings.api_version,
+    debug=settings.debug,
 )
 
-# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify allowed origins
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(health.router)
 app.include_router(llm_invocation.router)
 
-# Root endpoint
-@app.get("/")
-def read_root():
-    """Root endpoint - API is running."""
-    return {"message": "Welcome to FastAPI Backend"}
+
+@app.get("/", tags=["root"])
+def read_root() -> dict[str, str]:
+    """Root endpoint."""
+    return {
+        "message": "FastAPI Backend is running",
+        "environment": settings.environment,
+    }
+
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug,
+        proxy_headers=True,
+    )

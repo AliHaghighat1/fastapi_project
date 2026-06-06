@@ -2,30 +2,28 @@
 
 from fastapi import APIRouter
 
-router = APIRouter(
-    prefix="/health",
-    tags=["health"]
-)
+from app.config import settings
+from app.models.schemas import HealthResponse, ReadinessResponse
+
+router = APIRouter(prefix="/health", tags=["health"])
 
 
-@router.get("/")
-def health_check():
-    """
-    Health check endpoint.
-    Returns the status of the API.
-    """
-    return {
-        "status": "healthy"
-    }
+@router.get("", response_model=HealthResponse)
+@router.get("/", response_model=HealthResponse, include_in_schema=False)
+def health_check() -> HealthResponse:
+    """Return the basic application health status."""
+    return HealthResponse(
+        status="healthy",
+        service=settings.api_title,
+        environment=settings.environment,
+    )
 
 
-@router.get("/ready")
-def readiness_check():
-    """
-    Readiness check endpoint.
-    Returns True if the service is ready to handle requests.
-    """
-    return {
-        "ready": True,
-        "message": "Service is ready to accept requests"
-    }
+@router.get("/ready", response_model=ReadinessResponse)
+def readiness_check() -> ReadinessResponse:
+    """Return whether the service is ready to accept requests."""
+    return ReadinessResponse(
+        ready=True,
+        message="Service is ready to accept requests",
+        environment=settings.environment,
+    )
