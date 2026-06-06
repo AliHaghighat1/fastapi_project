@@ -8,11 +8,12 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-set -a
-# shellcheck source=/dev/null
-source "$ENV_FILE"
-set +a
-
-PROJECT_NAME="${COMPOSE_PROJECT_NAME:-fastapi_project}"
+PROJECT_NAME="$(awk -F= '/^COMPOSE_PROJECT_NAME=/ {
+  value = substr($0, index($0, "=") + 1)
+  gsub(/^[ \t\x27"]+|[ \t\x27"]+$/, "", value)
+  print value
+  exit
+}' "$ENV_FILE")"
+PROJECT_NAME="${PROJECT_NAME:-fastapi_project}"
 
 docker compose --env-file "$ENV_FILE" -p "$PROJECT_NAME" down

@@ -4,7 +4,7 @@ import json
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,26 +33,32 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, alias="DEBUG")
 
     # Security / integration settings
-    cors_origins: list[str] = Field(default=["*"], alias="CORS_ORIGINS")
+    cors_origins: str = Field(default="*", alias="CORS_ORIGINS")
     cohere_api_token: str | None = Field(default=None, alias="COHERE_API_TOKEN")
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, value: Any) -> list[str]:
-        """Accept CORS origins as JSON list or comma-separated string."""
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Return CORS origins from JSON list, comma-separated string, or wildcard."""
+        value: Any = self.cors_origins
         if value is None or value == "":
             return ["*"]
+
         if isinstance(value, list):
-            return value
-        if isinstance(value, str):
-            value = value.strip()
-            if value.startswith("["):
-                parsed = json.loads(value)
-                if not isinstance(parsed, list):
-                    raise ValueError("CORS_ORIGINS JSON value must be a list")
-                return [str(item).strip() for item in parsed if str(item).strip()]
-            return [item.strip() for item in value.split(",") if item.strip()]
-        raise ValueError("CORS_ORIGINS must be a list, JSON list, or comma-separated string")
+            return [str(item).strip() for item in value if str(item).strip()]
+
+        value = str(value).strip()
+        if (value.startswith("'") and value.endswith("'")) or (
+            value.startswith('"') and value.endswith('"')
+        ):
+            value = value[1:-1].strip()
+
+        if value.startswith("["):
+            parsed = json.loads(value)
+            if not isinstance(parsed, list):
+                raise ValueError("CORS_ORIGINS JSON value must be a list")
+            return [str(item).strip() for item in parsed if str(item).strip()]
+
+        return [item.strip() for item in value.split(",") if item.strip()] or ["*"]
 
 
 @lru_cache
