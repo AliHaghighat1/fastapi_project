@@ -1,6 +1,6 @@
 # FastAPI Backend Project
 
-A modern, scalable FastAPI backend starter template.
+A modern, scalable FastAPI backend starter template. (SMS)
 
 ## Project Structure
 
