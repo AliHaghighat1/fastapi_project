@@ -31,6 +31,38 @@ Each user has the following structure:
 
 ```
 
+## Email Validation
+
+This project uses **Pydantic EmailStr** for validating email addresses.
+
+### Why?
+
+It ensures that all user emails:
+- Are properly formatted
+- Are valid email structures (e.g. contain `@` and domain)
+- Prevent invalid data from entering the system
+
+### Dependency
+
+To enable email validation, install:
+
+```pip install "pydantic[email]"```
+
+or
+
+```pip install email-validator```
+
+### How it is used
+
+In the User model:
+
+```email: EmailStr```
+
+This automatically validates emails in:
+
+- POST /users
+- any request containing user data
+
 ## Get All Users
 
 Returns all users in the system.
