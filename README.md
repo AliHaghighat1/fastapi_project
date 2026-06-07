@@ -56,8 +56,19 @@ fastapi_project/
 
 5. **Create environment file:**
    ```bash
-   cp .env.example .env
+   cp .env
    ```
+
+### note:
+Windows File Explorer does not let you name files starting with a dot, use a code editor or the command line to create it.
+Using VS Code:
+Open your project folder in VS Code.
+Click the New File icon in the Explorer panel.
+Name the file exactly: .env 
+Using Command Prompt:
+Open the Command Prompt or PowerShell.
+Go to your project folder using the cd command (e.g., cd C:\Users\Name\Projects\MyProject).
+Type echo. > .env and press Enter.
 
 ## Running the Application
 
