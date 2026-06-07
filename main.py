@@ -8,6 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import health
 from app.routes import llm_invocation
 
+from app.routes import users
+from app.routes import products
+
 # Initialize FastAPI app
 app = FastAPI(
     title="FastAPI Backend",
@@ -37,3 +40,9 @@ def read_root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+
+app.include_router(users.router)
+
+app.include_router(products.router)
