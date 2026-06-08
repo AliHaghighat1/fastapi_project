@@ -5,3 +5,5 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.0
 cohere==5.21.1
 email-validator
+sqlalchemy
+pymysql

@@ -18,9 +18,18 @@ It demonstrates a simple CRUD-style API using an in-memory database.
 
 Each user has the following structure:
 
-```json id="model1"
+```
+
+---
+
+# Data Model
+
+Each user has the following structure:
+
+```json
 {
   "id": 1,
+  "public_id": "550e8400-e29b-41d4-a716-446655440000",
   "first_name": "string",
   "last_name": "string",
   "gender": "male | female",
@@ -30,6 +39,20 @@ Each user has the following structure:
 }
 
 ```
+
+---
+
+## Features
+
+- Get all users
+- Search users (filters + partial search)
+- Get single user by public_id (UUID)
+- Create user (with duplicate email protection)
+- Update user
+- Delete user
+- UUID-based public identification
+
+---
 
 ## Email Validation
 
@@ -42,16 +65,6 @@ It ensures that all user emails:
 - Are valid email structures (e.g. contain `@` and domain)
 - Prevent invalid data from entering the system
 
-### Dependency
-
-To enable email validation, install:
-
-```pip install "pydantic[email]"```
-
-or
-
-```pip install email-validator```
-
 ### How it is used
 
 In the User model:
@@ -63,69 +76,94 @@ This automatically validates emails in:
 - POST /users
 - any request containing user data
 
-## Get All Users
+---
 
-Returns all users in the system.
+## Get All Users (with filters + search)
 
 ### Request
 
 ```GET /users```
 
-## Filtering Users
+### Query Parameters
 
-You can filter users using query parameters:
+| Parameter  | Type    | Description               |
+| ---------- | ------- | ------------------------- |
+| first_name | string  | Partial match search      |
+| last_name  | string  | Partial match search      |
+| gender     | string  | Exact match (male/female) |
+| email      | string  | Partial match search      |
+| is_active  | boolean | Filter active users       |
 
-### By gender
+
+---
+
+### Examples
+
+#### Get all users
+
+```GET /users```
+
+#### Filter by gender
+
 ```GET /users?gender=male```
 
-### By active status
-```GET /users?is_active=true```
+#### Search by name
 
-### Combined filters
+```GET /users?first_name=ali```
+
+#### Search by email
+
+```GET /users?email=gmail```
+
+#### Combined filters
+
 ```GET /users?gender=female&is_active=true```
+
+
+---
 
 
 ## Get Single User
 
-Retrieve a specific user by ID.
+### Request
 
-```GET /users/{id}```
+```GET /users/{public_id}```
 
-### Example Request
-```GET /users/1```
+### Example
+
+```GET /users/550e8400-e29b-41d4-a716-446655440000```
 
 ### Success Response
 
-```
-{
+```{
   "id": 1,
+  "public_id": "550e8400-e29b-41d4-a716-446655440000",
   "first_name": "Ali",
   "last_name": "Mohammadi",
   "gender": "male",
   "email": "ali@example.com",
   "balance": 120.5,
   "is_active": true
-}
-```
+}```
 
-### Error Response (User Not Found)
+### Error Response
 
-```
-{
+```{
   "detail": "User not found"
 }
 ```
 
+---
+
 ## Create User
 
-Create a new user in the system.
+### Request
 
 ```POST /users```
 
-### Request Body
+### Body
 
-```
-{
+```{
   "first_name": "John",
   "last_name": "Doe",
   "gender": "male",
@@ -137,9 +175,9 @@ Create a new user in the system.
 
 ### Response
 
-```
-{
+```{
   "id": 11,
+  "public_id": "generated-uuid",
   "first_name": "John",
   "last_name": "Doe",
   "gender": "male",
@@ -149,25 +187,138 @@ Create a new user in the system.
 }
 ```
 
-## Auto ID Generation
+### Validation Rules
 
-When creating a new user:
+- Email must be unique
+- Email format must be valid
+- UUID is auto-generated
+- ID is auto-incremented
 
-- The system automatically assigns an ID
-- ID = (highest existing ID + 1)
-- Ensures uniqueness without a database
+---
 
-### Example:
+## Update User
 
-- Existing IDs: 1 → 10
-- New user ID: 11
+### Request
+
+```PUT /users/{public_id}```
+
+### Body
+
+```{
+  "first_name": "Updated",
+  "last_name": "Name",
+  "gender": "male",
+  "email": "updated@example.com",
+  "balance": 200,
+  "is_active": true
+}
+```
+
+### Response
+
+Returns updated user object.
+
+### Errors
+
+- 404 → User not found
+- 400 → Email already exists
+
+---
+
+## Delete User
+
+### Request
+
+```DELETE /users/{public_id}```
+
+### Response
+
+```{
+  "message": "User deleted successfully"
+}
+```
+
+---
+
+## Architecture
+
+- FastAPI → API layer
+- SQLAlchemy → ORM
+- MariaDB → Database
+- UUID → Public identifiers
+- Pydantic → Validation
+
+---
+
+## Security Design
+
+- Internal ID (auto-increment) is NOT exposed
+- Public ID uses UUID
+- Email is unique
+- Validation enforced at API level
+
+---
 
 ## Summary
 
-| Method | Endpoint            | Description      |
-| ------ | ------------------- | ---------------- |
-| GET    | `/users`            | Get all users    |
-| GET    | `/users/{id}`       | Get single user  |
-| POST   | `/users`            | Create user      |
-| GET    | `/users?gender=`    | Filter by gender |
-| GET    | `/users?is_active=` | Filter by status |
+| Method | Endpoint           | Description     |
+| ------ | ------------------ | --------------- |
+| GET    | /users             | List + search   |
+| GET    | /users/{public_id} | Get single user |
+| POST   | /users             | Create user     |
+| PUT    | /users/{public_id} | Update user     |
+| DELETE | /users/{public_id} | Delete user     |
+
+---
+
+## Dependencies
+
+This Users API uses the following main dependencies:
+
+### FastAPI
+
+```fastapi
+uvicorn
+```
+Used to build and run the REST API.
+
+#### Database ORM
+
+```sqlalchemy
+pymysql
+```
+
+Used to connect and interact with MariaDB using Python objects instead of raw SQL.
+
+### Data Validation
+
+```pydantic```
+
+Used for request and response validation (UserCreate, UserResponse).
+
+### Email Validation
+
+To validate user email addresses:
+
+```pip install "pydantic[email]"```
+
+or:
+
+```pip install email-validator```
+
+Used for validating EmailStr fields.
+
+### Environment Variables
+```python-dotenv```
+
+Used to load database credentials from .env.
+
+---
+
+## Installation
+
+Install dependencies from the project root:
+
+```bash
+pip install -r requirements.txt
+```

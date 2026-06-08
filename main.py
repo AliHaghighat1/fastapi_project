@@ -11,6 +11,12 @@ from app.routes import llm_invocation
 from app.routes import users
 from app.routes import products
 
+from app.database import Base
+from app.database import engine
+
+from app.models.user import User
+
+
 # Initialize FastAPI app
 app = FastAPI(
     title="FastAPI Backend",
@@ -46,3 +52,5 @@ if __name__ == "__main__":
 app.include_router(users.router)
 
 app.include_router(products.router)
+
+Base.metadata.create_all(bind=engine)

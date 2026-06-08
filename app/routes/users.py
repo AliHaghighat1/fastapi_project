@@ -1,6 +1,10 @@
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
 from typing import List, Optional
+
+from app.database import get_db
+from app.models.user import User as UserModel
+from app.schemas.user import UserCreate, UserResponse
 
 router = APIRouter(
     prefix="/users",
@@ -8,85 +12,119 @@ router = APIRouter(
 )
 
 # -----------------------
-# User Schema (input for POST)
+# GET all users (with filters)
 # -----------------------
-class UserCreate(BaseModel):
-    first_name: str
-    last_name: str
-    gender: str
-    email: EmailStr
-    balance: float
-    is_active: bool
-
-
-# -----------------------
-# User Schema (output)
-# -----------------------
-class User(UserCreate):
-    id: int
-
-
-# -----------------------
-# Fake Database
-# -----------------------
-fake_users_db: List[User] = [
-    User(id=1, first_name="Ali", last_name="Mohammadi", gender="male", email="ali1@example.com", balance=120.50, is_active=True),
-    User(id=2, first_name="Sara", last_name="Ahmadi", gender="female", email="sara@example.com", balance=250.00, is_active=True),
-    User(id=3, first_name="Reza", last_name="Karimi", gender="male", email="reza@example.com", balance=80.75, is_active=False),
-    User(id=4, first_name="Neda", last_name="Hosseini", gender="female", email="neda@example.com", balance=540.10, is_active=True),
-    User(id=5, first_name="Amir", last_name="Rahimi", gender="male", email="amir@example.com", balance=15.00, is_active=True),
-    User(id=6, first_name="Leila", last_name="Shirazi", gender="female", email="leila@example.com", balance=999.99, is_active=True),
-    User(id=7, first_name="Hossein", last_name="Fathi", gender="male", email="hossein@example.com", balance=300.30, is_active=False),
-    User(id=8, first_name="Zahra", last_name="Kazemi", gender="female", email="zahra@example.com", balance=45.20, is_active=True),
-    User(id=9, first_name="Mehdi", last_name="Najafi", gender="male", email="mehdi@example.com", balance=670.00, is_active=True),
-    User(id=10, first_name="Elham", last_name="Ghasemi", gender="female", email="elham@example.com", balance=10.00, is_active=False),
-]
-
-
-# -----------------------
-# GET all users (filtering)
-# -----------------------
-@router.get("/", response_model=List[User])
+@router.get("/", response_model=List[UserResponse])
 def get_users(
+    first_name: Optional[str] = Query(None),
+    last_name: Optional[str] = Query(None),
     gender: Optional[str] = Query(None),
-    is_active: Optional[bool] = Query(None)
+    email: Optional[str] = Query(None),
+    is_active: Optional[bool] = Query(None),
+    db: Session = Depends(get_db)
 ):
-    users = fake_users_db
 
+    query = db.query(UserModel)
+
+    # -----------------------
+    # Exact matches
+    # -----------------------
     if gender:
-        users = [u for u in users if u.gender == gender]
+        query = query.filter(UserModel.gender == gender)
 
     if is_active is not None:
-        users = [u for u in users if u.is_active == is_active]
+        query = query.filter(UserModel.is_active == is_active)
 
-    return users
+    # -----------------------
+    # Partial / flexible search
+    # -----------------------
+    if first_name:
+        query = query.filter(UserModel.first_name.ilike(f"%{first_name}%"))
+
+    if last_name:
+        query = query.filter(UserModel.last_name.ilike(f"%{last_name}%"))
+
+    if email:
+        query = query.filter(UserModel.email.ilike(f"%{email}%"))
+
+    return query.all()
 
 
 # -----------------------
 # GET single user
 # -----------------------
-@router.get("/{user_id}", response_model=User)
-def get_user(user_id: int):
-    for user in fake_users_db:
-        if user.id == user_id:
-            return user
+@router.get("/{public_id}", response_model=UserResponse)
+def get_user(public_id: str, db: Session = Depends(get_db)):
+    user = db.query(UserModel).filter(UserModel.public_id == public_id).first()
 
-    raise HTTPException(status_code=404, detail="User not found")
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
 
 
 # -----------------------
-# POST create user
+# CREATE user
 # -----------------------
-@router.post("/", response_model=User, status_code=201)
-def create_user(user: UserCreate):
-    # Auto ID generation
-    new_id = max([u.id for u in fake_users_db], default=0) + 1
+@router.post("/", response_model=UserResponse, status_code=201)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
-    new_user = User(
-        id=new_id,
-        **user.model_dump()
-    )
+    # check duplicate email
+    existing_user = db.query(UserModel).filter(UserModel.email == user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already exists")
 
-    fake_users_db.append(new_user)
+    new_user = UserModel(**user.model_dump())
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
     return new_user
+
+
+# -----------------------
+# UPDATE user (PUT)
+# -----------------------
+@router.put("/{public_id}", response_model=UserResponse)
+def update_user(public_id: str, user_update: UserCreate, db: Session = Depends(get_db)):
+
+    user = db.query(UserModel).filter(UserModel.public_id == public_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # check email duplication (exclude current user)
+    email_exists = db.query(UserModel).filter(
+        UserModel.email == user_update.email,
+        UserModel.public_id != public_id
+    ).first()
+
+    if email_exists:
+        raise HTTPException(status_code=400, detail="Email already exists")
+
+    # update fields
+    for key, value in user_update.model_dump().items():
+        setattr(user, key, value)
+
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+# -----------------------
+# DELETE user
+# -----------------------
+@router.delete("/{public_id}")
+def delete_user(public_id: str, db: Session = Depends(get_db)):
+
+    user = db.query(UserModel).filter(UserModel.public_id == public_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db.delete(user)
+    db.commit()
+
+    return {"message": "User deleted successfully"}
